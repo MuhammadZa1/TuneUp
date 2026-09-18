@@ -1,7 +1,6 @@
 # tuneup
 
 [![CI](https://github.com/MuhammadZa1/tuneup/actions/workflows/ci.yml/badge.svg)](https://github.com/MuhammadZa1/tuneup/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/MuhammadZa1/tuneup)](https://goreportcard.com/report/github.com/MuhammadZa1/tuneup)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **A diagnostic tool for Linux machines that Linux itself seems to have forgotten about.**
