@@ -26,7 +26,16 @@ More checks are planned — see [Roadmap](#roadmap).
 
 ## Install
 
-**Go install (requires Go 1.21+):**
+**Download a pre-built binary (no Go required):**
+
+Grab the archive for your OS/architecture from the [latest release](../../releases/latest), extract it, and run the `tuneup` binary directly:
+
+```bash
+tar -xzf tuneup-linux-amd64.tar.gz
+./tuneup
+```
+
+**Or install with Go (requires Go 1.21+):**
 
 ```bash
 go install github.com/MuhammadZa1/tuneup/cmd/tuneup@latest
@@ -39,9 +48,6 @@ git clone https://github.com/MuhammadZa1/tuneup.git
 cd tuneup
 go build -o tuneup ./cmd/tuneup
 ```
-
-Pre-built binaries for common architectures will be attached to
-[Releases](../../releases) once the project has its first tagged version.
 
 ## Usage
 
@@ -90,7 +96,6 @@ how to safely fix, it asks before touching anything.
       Wi-Fi power-saving causing drops, battery wear reporting
 - [ ] `--json` output for scripting/CI use
 - [ ] Distro-aware fixes (currently Debian/Ubuntu-family focused)
-- [ ] Tagged releases with pre-built binaries
 
 ## Contributing
 
