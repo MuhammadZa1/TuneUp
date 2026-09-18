@@ -1,0 +1,10 @@
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+tuneup
+
+# OS/editor cruft
+.DS_Store
+*.swp
