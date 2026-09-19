@@ -21,6 +21,8 @@ Mint, after hitting every one of these problems myself.
 | **GPU / Vulkan support** | Vulkan silently falling back to a CPU software renderer (lavapipe) instead of real GPU hardware — the reason games "launch" and then crawl or crash |
 | **Kernel / dkms mismatch** | dkms modules (often Wi-Fi or GPU drivers) that failed to build for the current or a newly installed kernel — before a reboot leaves you without networking |
 | **Swap / zram** | Low-RAM machines with no swap or zram configured, which turns memory pressure into freezes or the OOM killer instead of graceful slowdown |
+| **Battery wear** | How much capacity a laptop battery has lost against its original design capacity, plus cycle count where available |
+| **Disk I/O scheduler** | Spinning HDDs left on a scheduler poorly suited to seek-heavy access patterns, instead of bfq/mq-deadline |
 
 More checks are planned — see [Roadmap](#roadmap).
 
@@ -92,8 +94,7 @@ how to safely fix, it asks before touching anything.
 
 ## Roadmap
 
-- [ ] More checks: thermal throttling, disk I/O scheduler for HDDs,
-      Wi-Fi power-saving causing drops, battery wear reporting
+- [ ] More checks: thermal throttling, Wi-Fi power-saving causing drops
 - [ ] `--json` output for scripting/CI use
 - [ ] Distro-aware fixes (currently Debian/Ubuntu-family focused)
 

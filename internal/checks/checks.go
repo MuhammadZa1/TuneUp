@@ -22,5 +22,7 @@ func All() []Check {
 		&GPUVulkanCheck{},
 		&KernelDKMSCheck{},
 		&SwapZramCheck{},
+		&BatteryWearCheck{},
+		&DiskSchedulerCheck{},
 	}
 }
