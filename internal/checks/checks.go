@@ -24,5 +24,7 @@ func All() []Check {
 		&SwapZramCheck{},
 		&BatteryWearCheck{},
 		&DiskSchedulerCheck{},
+		&ThermalThrottleCheck{},
+		&WifiPowerSaveCheck{},
 	}
 }

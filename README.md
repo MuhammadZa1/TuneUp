@@ -23,6 +23,8 @@ Mint, after hitting every one of these problems myself.
 | **Swap / zram** | Low-RAM machines with no swap or zram configured, which turns memory pressure into freezes or the OOM killer instead of graceful slowdown |
 | **Battery wear** | How much capacity a laptop battery has lost against its original design capacity, plus cycle count where available |
 | **Disk I/O scheduler** | Spinning HDDs left on a scheduler poorly suited to seek-heavy access patterns, instead of bfq/mq-deadline |
+| **Thermal throttling** | Confirmed CPU throttle events since boot (via the kernel's own counters) or sustained high temperatures likely to cause throttling |
+| **Wi-Fi power saving** | Power management enabled on a wireless interface, a common cause of intermittent drops/laggy pings on some chipsets |
 
 More checks are planned — see [Roadmap](#roadmap).
 
@@ -76,6 +78,7 @@ how to safely fix, it asks before touching anything.
 | Flag | Effect |
 |---|---|
 | `--yes` | Apply every offered fix without prompting (useful for scripts/CI on your own fleet) |
+| `--json` | Print results as a single JSON object instead of interactive text — no prompts. Combine with `--yes` to also apply fixes and report the outcome per-check |
 | `--no-color` | Disable colored output |
 | `--version` | Print the version and exit |
 
@@ -94,8 +97,6 @@ how to safely fix, it asks before touching anything.
 
 ## Roadmap
 
-- [ ] More checks: thermal throttling, Wi-Fi power-saving causing drops
-- [ ] `--json` output for scripting/CI use
 - [ ] Distro-aware fixes (currently Debian/Ubuntu-family focused)
 
 ## Contributing
