@@ -1,0 +1,45 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "tuneup",
+  "version": "1.0.0",
+  "identifier": "dev.muhammadzakria.tuneup",
+  "build": {
+    "frontendDist": "../frontend"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "title": "tuneup",
+        "width": 820,
+        "height": 640,
+        "minWidth": 480,
+        "minHeight": 400,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["deb", "appimage"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "externalBin": ["binaries/tuneup"],
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "category": "Utility",
+    "shortDescription": "Diagnostics for aging Linux hardware",
+    "longDescription": "tuneup checks for common problems on aging or low-spec Linux hardware: audio crackling, GPU/Vulkan issues, kernel/dkms mismatches, swap configuration, battery wear, disk I/O scheduler, thermal throttling, and Wi-Fi power saving."
+  }
+}
