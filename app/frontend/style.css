@@ -184,32 +184,67 @@ html, body {
   color: var(--problem);
 }
 
-/* Check rows (dashboard + single-check view share this) */
+/* Summary banner */
+.summary-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 18px;
+}
+
+.summary-symbol {
+  font-family: var(--mono);
+  font-size: 16px;
+}
+
+.summary-ok {
+  background: color-mix(in srgb, var(--ok) 14%, var(--surface));
+  color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 35%, var(--border));
+}
+
+.summary-warn {
+  background: color-mix(in srgb, var(--warn) 14%, var(--surface));
+  color: var(--warn);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border));
+}
+
+/* Check cards */
 .check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.check-card {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
 }
 
-.check-row {
-  display: grid;
-  grid-template-columns: 24px 1fr auto;
-  gap: 4px 14px;
-  padding: 18px 20px;
-  border-bottom: 1px solid var(--border);
-  align-items: start;
-}
+.check-card.status-warning { border-left-color: var(--warn); }
+.check-card.status-problem { border-left-color: var(--problem); }
+.check-card.status-ok { border-left-color: var(--ok); }
 
-.check-row:last-child {
-  border-bottom: none;
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
 }
 
 .symbol {
   font-family: var(--mono);
   font-size: 15px;
-  line-height: 1.5;
+  width: 20px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .symbol.ok { color: var(--ok); }
@@ -218,42 +253,65 @@ html, body {
 .symbol.info { color: var(--accent); }
 .symbol.skipped { color: var(--text-muted); }
 
+.check-text {
+  flex: 1;
+  min-width: 0;
+}
+
 .check-title {
   font-weight: 600;
-  grid-column: 2;
+  font-size: 13.5px;
 }
 
 .check-message {
-  grid-column: 2;
   color: var(--text-muted);
+  font-size: 13px;
   margin-top: 2px;
 }
 
+.check-action {
+  flex-shrink: 0;
+}
+
 .check-detail {
-  grid-column: 2;
+  border-top: 1px solid var(--border);
+  padding: 14px 18px;
   color: var(--text-muted);
   font-size: 12.5px;
   font-family: var(--mono);
-  margin-top: 8px;
   white-space: pre-line;
-  border-left: 2px solid var(--border);
-  padding-left: 10px;
+  background: color-mix(in srgb, var(--accent) 4%, var(--surface));
+}
+
+.detail-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.detail-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .fix-btn {
-  grid-column: 3;
-  grid-row: 1;
   background: transparent;
   border: 1px solid var(--accent);
   color: var(--accent);
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 600;
-  padding: 5px 14px;
+  padding: 6px 16px;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
-  align-self: start;
 }
 
 .fix-btn:hover {
@@ -270,13 +328,13 @@ html, body {
 }
 
 .fix-status {
-  grid-column: 3;
   font-size: 12px;
-  align-self: start;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .fix-status.applied { color: var(--ok); }
-.fix-status.failed { color: var(--problem); }
+.fix-status.failed { color: var(--problem); cursor: help; }
 
 /* Settings view */
 .settings-group {

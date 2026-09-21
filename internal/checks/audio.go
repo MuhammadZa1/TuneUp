@@ -63,7 +63,7 @@ func (c *AudioCrackleCheck) Run() report.Result {
 		Message: "No custom scheduling quantum is set. On slower CPUs this is a common cause of audio crackling/dropouts.",
 		Detail:  "Raising default.clock.quantum / min-quantum to 1024 gives PipeWire more time per audio buffer.",
 		Fix: &report.Fix{
-			Description: fmt.Sprintf("Write a quantum override to %s (requires sudo) and restart PipeWire", pipewireOverridePath),
+			Description: fmt.Sprintf("Write a quantum override to %s (will ask for your password) and restart PipeWire", pipewireOverridePath),
 			Apply:       applyQuantumFix,
 		},
 	}
@@ -98,7 +98,7 @@ func findExistingQuantumConfig() string {
 func applyQuantumFix() error {
 	dir := filepath.Dir(pipewireOverridePath)
 	if !fileExists(dir) {
-		if out, ok := runCommandStatus("sudo", "mkdir", "-p", dir); !ok {
+		if out, ok := runCommandStatus("pkexec", "mkdir", "-p", dir); !ok {
 			return fmt.Errorf("creating %s: %s", dir, out)
 		}
 	}
@@ -114,7 +114,7 @@ func applyQuantumFix() error {
 	}
 	tmp.Close()
 
-	if out, ok := runCommandStatus("sudo", "cp", tmp.Name(), pipewireOverridePath); !ok {
+	if out, ok := runCommandStatus("pkexec", "cp", tmp.Name(), pipewireOverridePath); !ok {
 		return fmt.Errorf("writing %s: %s", pipewireOverridePath, out)
 	}
 

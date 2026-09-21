@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 )
 
 const blockDevDir = "/sys/block"
+const diskSchedulerUdevRule = "/etc/udev/rules.d/60-tuneup-hdd-scheduler.rules"
 
 // preferredHDDSchedulers are I/O schedulers well-suited to spinning
 // disks, in order of preference. "none"/"noop" is fine for SSDs/NVMe
@@ -32,7 +34,7 @@ func (c *DiskSchedulerCheck) Run() report.Result {
 		}
 	}
 
-	var hddFindings []string
+	var affected []string
 	sawAnyDisk := false
 
 	for _, dev := range devices {
@@ -56,7 +58,7 @@ func (c *DiskSchedulerCheck) Run() report.Result {
 		}
 
 		if !isPreferredScheduler(scheduler) {
-			hddFindings = append(hddFindings, name+" is using \""+scheduler+"\"")
+			affected = append(affected, name)
 		}
 	}
 
@@ -67,12 +69,20 @@ func (c *DiskSchedulerCheck) Run() report.Result {
 		}
 	}
 
-	if len(hddFindings) > 0 {
+	if len(affected) > 0 {
+		findings := make([]string, len(affected))
+		for i, name := range affected {
+			findings[i] = name + " is using \"" + currentScheduler(filepath.Join(blockDevDir, name)) + "\""
+		}
 		return report.Result{
 			Check: c.Name(), Title: title, Status: report.StatusWarning,
 			Message: "One or more HDDs aren't using a scheduler well-suited to spinning disks.",
-			Detail: strings.Join(hddFindings, "\n") +
-				"\n\nbfq or mq-deadline generally perform better than \"none\" on HDDs, since they reorder and batch requests to reduce seek time. No automatic fix is offered since the best choice depends on your workload — see the README for how to change it (it's a one-line write to /sys/block/<dev>/queue/scheduler, or a udev rule to make it persistent).",
+			Detail: strings.Join(findings, "\n") +
+				"\n\nbfq generally performs better than \"none\" on HDDs, since it reorders and batches requests to reduce seek time.",
+			Fix: &report.Fix{
+				Description: "Switch affected HDDs to bfq now, and add a udev rule so it stays set after reboots",
+				Apply:       func() error { return applyDiskSchedulerFix(affected) },
+			},
 		}
 	}
 
@@ -80,6 +90,39 @@ func (c *DiskSchedulerCheck) Run() report.Result {
 		Check: c.Name(), Title: title, Status: report.StatusOK,
 		Message: "All detected HDDs are using a scheduler well-suited to spinning disks.",
 	}
+}
+
+// applyDiskSchedulerFix sets bfq immediately on each affected disk and
+// writes a udev rule so newly-attached or re-enumerated HDDs get it
+// automatically in the future, surviving reboots.
+func applyDiskSchedulerFix(devices []string) error {
+	for _, name := range devices {
+		schedulerPath := filepath.Join(blockDevDir, name, "queue", "scheduler")
+		if out, ok := runCommandStatus("pkexec", "sh", "-c", fmt.Sprintf("echo bfq > %s", schedulerPath)); !ok {
+			return fmt.Errorf("setting scheduler for %s: %s", name, out)
+		}
+	}
+
+	rule := `# Written by tuneup: use bfq for spinning HDDs.
+ACTION=="add|change", KERNEL=="sd[a-z]", ATTR{queue/rotational}=="1", ATTR{queue/scheduler}="bfq"
+`
+	tmp, err := os.CreateTemp("", "tuneup-udev-*.rules")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.WriteString(rule); err != nil {
+		tmp.Close()
+		return err
+	}
+	tmp.Close()
+
+	if out, ok := runCommandStatus("pkexec", "cp", tmp.Name(), diskSchedulerUdevRule); !ok {
+		return fmt.Errorf("writing udev rule: %s", out)
+	}
+	runCommand("pkexec", "udevadm", "control", "--reload-rules")
+
+	return nil
 }
 
 // currentScheduler reads /sys/block/<dev>/queue/scheduler, which looks

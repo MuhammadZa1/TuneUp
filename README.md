@@ -13,6 +13,12 @@ only ever changes your system when you explicitly say so.
 I built the first version of this on a 2012 MacBook Pro running Linux
 Mint, after hitting every one of these problems myself.
 
+Available as a **CLI** (this README) or as a **desktop app** with a
+sidebar, per-check tabs, light/dark themes, a system tray icon,
+launch-on-login, and scheduled background scans with notifications —
+see [`app/`](app/) for the app, or grab a pre-built `.deb`/`.AppImage`
+from [Releases](../../releases/latest).
+
 ## What it checks
 
 | Check | What it catches |
@@ -22,9 +28,9 @@ Mint, after hitting every one of these problems myself.
 | **Kernel / dkms mismatch** | dkms modules (often Wi-Fi or GPU drivers) that failed to build for the current or a newly installed kernel — before a reboot leaves you without networking |
 | **Swap / zram** | Low-RAM machines with no swap or zram configured, which turns memory pressure into freezes or the OOM killer instead of graceful slowdown |
 | **Battery wear** | How much capacity a laptop battery has lost against its original design capacity, plus cycle count where available |
-| **Disk I/O scheduler** | Spinning HDDs left on a scheduler poorly suited to seek-heavy access patterns, instead of bfq/mq-deadline |
+| **Disk I/O scheduler** | Spinning HDDs left on a scheduler poorly suited to seek-heavy access patterns, instead of bfq — fixable, and persists via a udev rule |
 | **Thermal throttling** | Confirmed CPU throttle events since boot (via the kernel's own counters) or sustained high temperatures likely to cause throttling |
-| **Wi-Fi power saving** | Power management enabled on a wireless interface, a common cause of intermittent drops/laggy pings on some chipsets |
+| **Wi-Fi power saving** | Power management enabled on a wireless interface, a common cause of intermittent drops/laggy pings on some chipsets — fixable, and persists via NetworkManager when available |
 
 More checks are planned — see [Roadmap](#roadmap).
 
@@ -66,18 +72,21 @@ Read-only checks first. Nothing is changed without your confirmation.
 ! Audio crackling (PipeWire)
   No custom scheduling quantum is set. On slower CPUs this is a common
   cause of audio crackling/dropouts.
-  Fix available: Write a quantum override to /etc/pipewire/pipewire.conf.d/99-tuneup-quantum.conf (requires sudo) and restart PipeWire
+  Fix available: Write a quantum override to /etc/pipewire/pipewire.conf.d/99-tuneup-quantum.conf (will ask for your password) and restart PipeWire
   Apply this fix? [y/N]
 ```
 
 Every check runs read-only first. If a check finds something it knows
-how to safely fix, it asks before touching anything.
+how to safely fix, it asks before touching anything. Fixes that need
+elevated permissions prompt for your password via `pkexec`, which
+works whether you're running from a terminal or from the desktop app.
 
 **Flags:**
 
 | Flag | Effect |
 |---|---|
 | `--yes` | Apply every offered fix without prompting (useful for scripts/CI on your own fleet) |
+| `--only <names>` | Run only the given comma-separated check names instead of all of them, e.g. `--only disk-scheduler,battery-wear` |
 | `--json` | Print results as a single JSON object instead of interactive text — no prompts. Combine with `--yes` to also apply fixes and report the outcome per-check |
 | `--no-color` | Disable colored output |
 | `--version` | Print the version and exit |
@@ -88,8 +97,9 @@ how to safely fix, it asks before touching anything.
   Nothing is written or changed unless you confirm a specific fix (or
   pass `--yes`).
 - **No fix for things with no safe default.** Some findings (GPU
-  hardware limits, swap sizing) are surfaced as information, not
-  "fixes," because the right answer depends on your hardware and
+  hardware limits, dkms build failures, battery wear) are surfaced as
+  information, not "fixes," because there either isn't a safe
+  automated action or the right answer depends on your hardware and
   preferences, not a one-size-fits-all script.
 - **Honest about what it can't check.** If a required tool isn't
   installed, the check reports `SKIPPED` and says why — it never

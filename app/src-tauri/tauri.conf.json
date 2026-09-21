@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "tuneup",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "identifier": "dev.muhammadzakria.tuneup",
   "build": {
     "frontendDist": "../frontend"

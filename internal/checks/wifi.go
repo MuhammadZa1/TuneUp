@@ -1,6 +1,7 @@
 package checks
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/MuhammadZa1/tuneup/internal/report"
@@ -48,7 +49,11 @@ func (c *WifiPowerSaveCheck) Run() report.Result {
 		return report.Result{
 			Check: c.Name(), Title: title, Status: report.StatusWarning,
 			Message: "Power saving is enabled on one or more Wi-Fi interfaces (" + strings.Join(onInterfaces, ", ") + "). On some chipsets this causes intermittent drops, laggy pings, or slow reconnects.",
-			Detail:  "No automatic fix is offered since disabling power save trades some battery life for reliability, and the right choice is a real preference. To test the tradeoff yourself: `sudo iw dev " + onInterfaces[0] + " set power_save off`, then check if connection stability improves. This resets on reboot; see the README for how to make it persistent if it helps.",
+			Detail:  "Disabling power save trades a small amount of battery life for reliability. If this fix doesn't improve things for you, it's easy to re-enable from your network settings.",
+			Fix: &report.Fix{
+				Description: "Turn off Wi-Fi power saving on " + strings.Join(onInterfaces, ", ") + " now, and keep it off after reconnects/reboots",
+				Apply:       func() error { return applyWifiPowerSaveFix(onInterfaces) },
+			},
 		}
 	}
 
@@ -56,6 +61,54 @@ func (c *WifiPowerSaveCheck) Run() report.Result {
 		Check: c.Name(), Title: title, Status: report.StatusOK,
 		Message: "Wi-Fi power saving is off on all detected interfaces.",
 	}
+}
+
+// applyWifiPowerSaveFix turns off power save immediately via iw, and
+// additionally persists the setting through NetworkManager when it's
+// managing the connection — a plain `iw` change alone resets on the
+// next reconnect or reboot.
+func applyWifiPowerSaveFix(interfaces []string) error {
+	for _, iface := range interfaces {
+		if out, ok := runCommandStatus("pkexec", "iw", "dev", iface, "set", "power_save", "off"); !ok {
+			return fmt.Errorf("disabling power save on %s: %s", iface, out)
+		}
+	}
+
+	if commandExists("nmcli") {
+		for _, conn := range activeConnectionsFor(interfaces) {
+			// wifi.powersave: 1 = ignore/default, 2 = disable, 3 = enable.
+			runCommand("pkexec", "nmcli", "connection", "modify", conn, "wifi.powersave", "2")
+		}
+		// Re-apply so the persisted setting takes effect on the
+		// current connection immediately, not just on the next one.
+		for _, iface := range interfaces {
+			runCommand("pkexec", "nmcli", "device", "reapply", iface)
+		}
+	}
+
+	return nil
+}
+
+// activeConnectionsFor returns the NetworkManager connection names
+// currently active on the given interfaces.
+func activeConnectionsFor(interfaces []string) []string {
+	out, ok := runCommandStatus("nmcli", "-t", "-f", "DEVICE,NAME", "connection", "show", "--active")
+	if !ok {
+		return nil
+	}
+	want := make(map[string]bool)
+	for _, iface := range interfaces {
+		want[iface] = true
+	}
+
+	var names []string
+	for _, line := range strings.Split(out, "\n") {
+		parts := strings.SplitN(line, ":", 2)
+		if len(parts) == 2 && want[parts[0]] {
+			names = append(names, parts[1])
+		}
+	}
+	return names
 }
 
 // wirelessInterfaces returns interface names that `iw dev` reports.

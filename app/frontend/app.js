@@ -21,13 +21,10 @@ const SCAN_INTERVAL_OPTIONS = [
   { minutes: 1440, label: "Once a day" },
 ];
 
-const STATUS_SYMBOLS = {
-  OK: "✓",
-  WARNING: "!",
-  PROBLEM: "✗",
-  INFO: "i",
-  SKIPPED: "-",
-};
+const STATUS_SYMBOLS = { OK: "✓", WARNING: "!", PROBLEM: "✗", INFO: "i", SKIPPED: "-" };
+
+// Lower = more severe = sorts first on the dashboard.
+const STATUS_RANK = { PROBLEM: 0, WARNING: 1, INFO: 2, OK: 3, SKIPPED: 4 };
 
 const navItemsEl = document.getElementById("nav-items");
 const navSettingsBtn = document.getElementById("nav-settings-btn");
@@ -40,14 +37,10 @@ let currentView = "dashboard";
 
 function renderNav() {
   navItemsEl.innerHTML = "";
-
-  const dashboardBtn = makeNavItem("dashboard", "◈", "Dashboard");
-  navItemsEl.appendChild(dashboardBtn);
-
+  navItemsEl.appendChild(makeNavItem("dashboard", "◈", "Dashboard"));
   for (const check of CHECKS) {
     navItemsEl.appendChild(makeNavItem(check.name, check.icon, check.label));
   }
-
   updateNavActiveState();
 }
 
@@ -70,70 +63,99 @@ function updateNavActiveState() {
 function switchView(view) {
   currentView = view;
   updateNavActiveState();
-
-  if (view === "dashboard") {
-    renderDashboardView();
-  } else if (view === "settings") {
-    renderSettingsView();
-  } else {
-    renderCheckView(view);
-  }
+  if (view === "dashboard") renderDashboardView();
+  else if (view === "settings") renderSettingsView();
+  else renderCheckView(view);
 }
 
 navSettingsBtn.addEventListener("click", () => switchView("settings"));
 
-// ---------- Shared check-row rendering ----------
+// ---------- Shared check-card rendering ----------
 
 function statusClass(status) {
   return status.toLowerCase();
 }
 
-function buildCheckRow(result) {
+function buildCheckCard(result) {
+  const card = document.createElement("div");
+  card.className = "check-card status-" + statusClass(result.status);
+  card.dataset.check = result.check;
+
   const row = document.createElement("div");
   row.className = "check-row";
-  row.dataset.check = result.check;
 
   const symbol = document.createElement("div");
   symbol.className = "symbol " + statusClass(result.status);
   symbol.textContent = STATUS_SYMBOLS[result.status] || "?";
   row.appendChild(symbol);
 
+  const textWrap = document.createElement("div");
+  textWrap.className = "check-text";
+
   const title = document.createElement("div");
   title.className = "check-title";
   title.textContent = result.title;
-  row.appendChild(title);
+  textWrap.appendChild(title);
 
   const message = document.createElement("div");
   message.className = "check-message";
   message.textContent = result.message;
-  row.appendChild(message);
+  textWrap.appendChild(message);
 
-  if (result.detail) {
-    const detail = document.createElement("div");
-    detail.className = "check-detail";
-    detail.textContent = result.detail;
-    row.appendChild(detail);
-  }
+  row.appendChild(textWrap);
+
+  const actionWrap = document.createElement("div");
+  actionWrap.className = "check-action";
 
   if (result.fix_applied) {
-    row.appendChild(makeFixStatus("Fixed", "applied"));
+    actionWrap.appendChild(makeFixStatus("Fixed", "applied"));
   } else if (result.fix_error) {
-    row.appendChild(makeFixStatus("Fix failed: " + result.fix_error, "failed"));
+    actionWrap.appendChild(makeFixStatus("Fix failed", "failed", result.fix_error));
   } else if (result.fix_available) {
     const fixBtn = document.createElement("button");
     fixBtn.className = "fix-btn";
     fixBtn.textContent = "Fix";
     fixBtn.addEventListener("click", () => applyFix(result.check, fixBtn));
-    row.appendChild(fixBtn);
+    actionWrap.appendChild(fixBtn);
+  } else if (result.detail) {
+    const isAdvisory = result.status === "WARNING" || result.status === "PROBLEM";
+    const toggleBtn = document.createElement("button");
+    toggleBtn.className = "detail-toggle-btn";
+    toggleBtn.textContent = isAdvisory ? "What can I do?" : "Details";
+    toggleBtn.addEventListener("click", () => toggleDetail(card, toggleBtn, isAdvisory));
+    actionWrap.appendChild(toggleBtn);
   }
 
-  return row;
+  row.appendChild(actionWrap);
+  card.appendChild(row);
+
+  if (result.detail) {
+    const detail = document.createElement("div");
+    detail.className = "check-detail";
+    detail.textContent = result.detail;
+    detail.hidden = true;
+    card.appendChild(detail);
+  }
+
+  return card;
 }
 
-function makeFixStatus(text, cls) {
+function toggleDetail(card, btn, isAdvisory) {
+  const detail = card.querySelector(".check-detail");
+  if (!detail) return;
+  detail.hidden = !detail.hidden;
+  if (isAdvisory) {
+    btn.textContent = detail.hidden ? "What can I do?" : "Hide";
+  } else {
+    btn.textContent = detail.hidden ? "Details" : "Hide";
+  }
+}
+
+function makeFixStatus(text, cls, tooltip) {
   const el = document.createElement("div");
   el.className = "fix-status " + cls;
   el.textContent = text;
+  if (tooltip) el.title = tooltip;
   return el;
 }
 
@@ -145,25 +167,49 @@ async function applyFix(checkName, buttonEl) {
     const result = data.results.find((r) => r.check === checkName);
     if (!result) return;
 
-    const row = document.querySelector(`.check-row[data-check="${cssEscape(checkName)}"]`);
-    if (!row) return;
+    const card = document.querySelector(`.check-card[data-check="${cssEscape(checkName)}"]`);
+    if (!card) return;
 
-    const symbol = row.querySelector(".symbol");
+    card.className = "check-card status-" + statusClass(result.status);
+    const symbol = card.querySelector(".symbol");
     symbol.className = "symbol " + statusClass(result.status);
     symbol.textContent = STATUS_SYMBOLS[result.status] || "?";
-    row.querySelector(".check-message").textContent = result.message;
+    card.querySelector(".check-message").textContent = result.message;
+
+    const existingDetail = card.querySelector(".check-detail");
+    if (existingDetail) {
+      if (result.detail) {
+        existingDetail.textContent = result.detail;
+      } else {
+        existingDetail.remove();
+      }
+    }
 
     if (result.fix_applied) {
       buttonEl.replaceWith(makeFixStatus("Fixed", "applied"));
     } else if (result.fix_error) {
-      buttonEl.replaceWith(makeFixStatus("Fix failed: " + result.fix_error, "failed"));
+      buttonEl.replaceWith(makeFixStatus("Fix failed", "failed", result.fix_error));
     } else {
       buttonEl.disabled = false;
       buttonEl.textContent = "Fix";
     }
   } catch (err) {
-    buttonEl.replaceWith(makeFixStatus("Fix failed: " + String(err), "failed"));
+    buttonEl.replaceWith(makeFixStatus("Fix failed", "failed", String(err)));
   }
+}
+
+function sortBySeverity(results) {
+  return [...results].sort((a, b) => (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9));
+}
+
+function buildSummaryBanner(data) {
+  const banner = document.createElement("div");
+  const ok = data.problems_found === 0;
+  banner.className = "summary-banner " + (ok ? "summary-ok" : "summary-warn");
+  banner.innerHTML = ok
+    ? `<span class="summary-symbol">✓</span> All good — no issues found`
+    : `<span class="summary-symbol">!</span> ${data.problems_found} check${data.problems_found === 1 ? "" : "s"} flagged something`;
+  return banner;
 }
 
 // ---------- Dashboard view ----------
@@ -177,6 +223,7 @@ async function renderDashboardView() {
       </div>
       <button class="action-btn" id="scan-all-btn">Scan all</button>
     </div>
+    <div id="summary-slot"></div>
     <div class="check-list" id="check-list">
       <p class="loading">Running checks…</p>
     </div>
@@ -189,14 +236,17 @@ async function renderDashboardView() {
 async function loadDashboardResults() {
   const btn = document.getElementById("scan-all-btn");
   const listEl = document.getElementById("check-list");
+  const summarySlot = document.getElementById("summary-slot");
   if (btn) btn.disabled = true;
   listEl.innerHTML = '<p class="loading">Running checks…</p>';
+  if (summarySlot) summarySlot.innerHTML = "";
 
   try {
     const data = await invoke("run_checks");
     listEl.innerHTML = "";
-    for (const result of data.results) {
-      listEl.appendChild(buildCheckRow(result));
+    if (summarySlot) summarySlot.appendChild(buildSummaryBanner(data));
+    for (const result of sortBySeverity(data.results)) {
+      listEl.appendChild(buildCheckCard(result));
     }
   } catch (err) {
     listEl.innerHTML = `<p class="error">${escapeHtml(String(err))}</p>`;
@@ -241,7 +291,7 @@ async function loadSingleCheck(checkName) {
       listEl.innerHTML = '<p class="error">No result returned for this check.</p>';
       return;
     }
-    listEl.appendChild(buildCheckRow(data.results[0]));
+    listEl.appendChild(buildCheckCard(data.results[0]));
   } catch (err) {
     listEl.innerHTML = `<p class="error">${escapeHtml(String(err))}</p>`;
   } finally {

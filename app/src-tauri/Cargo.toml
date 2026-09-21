@@ -1,6 +1,6 @@
 [package]
 name = "tuneup-app"
-version = "1.0.0"
+version = "1.2.0"
 description = "Desktop app for the tuneup Linux hardware diagnostics tool"
 edition = "2021"
 rust-version = "1.77"
